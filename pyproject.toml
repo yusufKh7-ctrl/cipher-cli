@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel>=0.38.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cipher-cli"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyfiglet>=1.0.4",
+    "rich>=15.0.0",
+    "typer>=0.26.2",
+    "yt-dlp>=2026.3.17",
+]
+
+
+[project.scripts]
+cipher = "cipher.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cipher*"]
