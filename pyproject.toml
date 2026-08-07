@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cipher-cli"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Modular CLI toolkit with a proper YouTube/audio/video downloader (yt-dlp)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,7 +14,6 @@ dependencies = [
     "typer>=0.26.2",
     "yt-dlp>=2026.3.17",
 ]
-
 
 [project.scripts]
 cipher = "cipher.main:app"
