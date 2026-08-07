@@ -121,13 +121,14 @@ class YTDL:
             outtmpl=str(out_dir / "%(title)s.%(ext)s"),
             no_playlist=no_playlist,
         )
+
+        write_thumb = embed_thumbnail or keep_thumbnail
+
         opts.update(
             {
                 "format": "bestaudio/best",
                 "postprocessors": postprocessors,
-                "writethumbnail": embed_thumbnail or keep_thumbnail,
-                # Keep original thumbnail file if requested
-                "writethumbnail": True if (embed_thumbnail or keep_thumbnail) else False,
+                "writethumbnail": write_thumb,
             }
         )
 
