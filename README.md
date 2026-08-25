@@ -58,22 +58,37 @@ cipher ytdl mp3 "playlist-url" --no-playlist
 
 # Inspect without downloading
 cipher ytdl info "URL"
+cipher ytdl info "playlist-url" --playlist   # numbered listing of all items
 
 # Custom folder
 cipher ytdl mp3 "URL" -o ~/Music/YouTube
 ```
 
 Files are saved under `~/Downloads/Cipher/{Audio,Video,Thumbnails}` by default.
+Playlist downloads are automatically prefixed (`01 - Title.mp3`, ...) to avoid
+collisions. Commands exit with a non-zero code on failure, so they're safe to
+use in scripts.
 
 ## Notes / Limitations
 
 - YouTube changes protections often. Keep `yt-dlp` updated (`pip install -U yt-dlp`).
+- A JavaScript runtime is **required** for YouTube downloads: install [deno](https://deno.com) (recommended) and make sure it's on your `PATH`. Without it, media URLs fail with HTTP 403.
+- Age-restricted / members-only videos, or bot-check blocks on your IP? Pass cookies:
+
+```bash
+# read cookies straight from an installed browser
+cipher ytdl mp3 "URL" --cookies-from-browser firefox
+# ...or from a Netscape-format cookie file exported by a browser extension
+cipher ytdl info "URL" --cookies ~/youtube-cookies.txt
+```
+
 - Thumbnail embedding requires ffmpeg and works best with mp3/m4a.
 - This tool is for personal use. Respect copyright and YouTube ToS.
 
 ## Roadmap (honest)
 
-- [ ] hash / encoding commands (currently placeholders)
+- [x] Playlist resilience (skip broken items, numbered filenames)
+- [x] Cookies support (`--cookies`, `--cookies-from-browser`)
 - [ ] Config file for default quality / paths
 - [ ] Concurrent playlist downloads
 - [ ] Cookies / authenticated downloads helper

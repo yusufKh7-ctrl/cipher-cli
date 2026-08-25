@@ -15,7 +15,9 @@ console = Console()
 app = typer.Typer(
     name="cipher",
     help="Cipher CLI - A modular command-line toolkit.",
-    invoke_without_command=True
+    invoke_without_command=True,
+    rich_markup_mode="rich",
+    no_args_is_help=False,
 )
 
 

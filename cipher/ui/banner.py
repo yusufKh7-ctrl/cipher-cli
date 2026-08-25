@@ -45,8 +45,8 @@ def show_command_list(console: Console):
     table.add_row("ytdl mp3", "Download audio (mp3/m4a...) + embedded thumbnail & metadata")
     table.add_row("ytdl mp4", "Download video as MP4 with quality / subs options")
     table.add_row("ytdl info", "Show title, channel, duration, thumbnail URL (no download)")
-    table.add_row("hash", "coming soon...")
-    table.add_row("encoding", "coming soon...")
+    table.add_row("hash", "[dim](planned)[/dim]")
+    table.add_row("encoding", "[dim](planned)[/dim]")
 
     console.print(Align.center(table))
 
