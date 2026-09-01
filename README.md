@@ -38,6 +38,21 @@ pip install -e .
 uv sync
 ```
 
+### Android (Termux)
+
+```bash
+pkg install python ffmpeg nodejs git
+git clone https://github.com/yusufKh7-ctrl/cipher-cli.git
+cd cipher-cli
+pip install -e .
+```
+
+cipher automatically detects an available JavaScript runtime for YouTube's
+signature solving (deno → node → bun → quickjs). On Termux, `nodejs` fills
+that role — no deno needed. Force a specific one with `--js-runtime node`.
+(`--cookies-from-browser` is not usable on Android; export a cookies file
+from your desktop browser and use `--cookies` instead.)
+
 ## Usage
 
 ```bash
@@ -72,7 +87,7 @@ use in scripts.
 ## Notes / Limitations
 
 - YouTube changes protections often. Keep `yt-dlp` updated (`pip install -U yt-dlp`).
-- A JavaScript runtime is **required** for YouTube downloads: install [deno](https://deno.com) (recommended) and make sure it's on your `PATH`. Without it, media URLs fail with HTTP 403.
+- A JavaScript runtime is **required** for YouTube downloads: cipher auto-detects deno, node, bun or quickjs on your `PATH`. Without any of them, media URLs fail with HTTP 403 (install deno on desktop, or `pkg install nodejs` on Termux).
 - Age-restricted / members-only videos, or bot-check blocks on your IP? Pass cookies:
 
 ```bash

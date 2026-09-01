@@ -61,6 +61,13 @@ _BROWSER_SPEC_RE = re.compile(
 )
 
 
+def resolve_js_runtime(js_runtime: Optional[str]) -> Optional[list[str]]:
+    """Validate --js-runtime and convert it for yt-dlp (None = auto-detect)."""
+    if not js_runtime:
+        return None
+    return [r.strip().lower() for r in js_runtime.split(",") if r.strip()]
+
+
 def resolve_cookies(
     cookie_file: Optional[str],
     cookies_from_browser: Optional[str],
@@ -159,6 +166,14 @@ def mp3(
         "(firefox, chrome, edge, chromium, brave, vivaldi, opera, safari...). "
         "e.g. 'firefox' or 'chrome:Default'.",
     ),
+    js_runtime: Optional[str] = typer.Option(
+        None,
+        "--js-runtime",
+        metavar="RUNTIME[,RUNTIME...]",
+        help="JS runtimes for YouTube signature solving (deno, node, bun, quickjs). "
+        "By default all installed ones are detected automatically. "
+        "Useful to force e.g. 'node' on Termux.",
+    ),
 ):
     """
     Download audio with embedded cover art + metadata.
@@ -178,21 +193,22 @@ def mp3(
     """
     try:
         cfile, cbrowser = resolve_cookies(cookie_file, cookies_from_browser)
-    except typer.BadParameter as e:
-        console.print(f"[bold red]Error:[/bold red] {e.message}")
+        runtimes = resolve_js_runtime(js_runtime)
+        ok = ytdl.download_audio(
+            url=url,
+            codec=codec.value,
+            quality=quality.value,
+            embed_thumbnail=not no_embed,
+            keep_thumbnail=keep_thumbnail,
+            no_playlist=no_playlist,
+            output_dir=output,
+            cookie_file=cfile,
+            cookies_from_browser=cbrowser,
+            js_runtimes=runtimes,
+        )
+    except (typer.BadParameter, ValueError) as e:
+        console.print(f"[bold red]Error:[/bold red] {getattr(e, 'message', None) or e}")
         raise typer.Exit(code=2)
-
-    ok = ytdl.download_audio(
-        url=url,
-        codec=codec.value,
-        quality=quality.value,
-        embed_thumbnail=not no_embed,
-        keep_thumbnail=keep_thumbnail,
-        no_playlist=no_playlist,
-        output_dir=output,
-        cookie_file=cfile,
-        cookies_from_browser=cbrowser,
-    )
     if not ok:
         raise typer.Exit(code=1)
 
@@ -250,6 +266,13 @@ def mp4(
         help="Load cookies directly from an installed browser "
         "(firefox, chrome, edge, chromium, brave, vivaldi, opera, safari...).",
     ),
+    js_runtime: Optional[str] = typer.Option(
+        None,
+        "--js-runtime",
+        metavar="RUNTIME[,RUNTIME...]",
+        help="JS runtimes for YouTube signature solving (deno, node, bun, quickjs). "
+        "Auto-detected by default.",
+    ),
 ):
     """
     Download video as MP4.
@@ -272,21 +295,22 @@ def mp4(
 
     try:
         cfile, cbrowser = resolve_cookies(cookie_file, cookies_from_browser)
-    except typer.BadParameter as e:
-        console.print(f"[bold red]Error:[/bold red] {e.message}")
+        runtimes = resolve_js_runtime(js_runtime)
+        ok = ytdl.download_video(
+            url=url,
+            quality=quality.value,
+            no_playlist=no_playlist,
+            output_dir=output,
+            write_subs=subs or embed_subs,
+            embed_subs=embed_subs,
+            sub_langs=langs,
+            cookie_file=cfile,
+            cookies_from_browser=cbrowser,
+            js_runtimes=runtimes,
+        )
+    except (typer.BadParameter, ValueError) as e:
+        console.print(f"[bold red]Error:[/bold red] {getattr(e, 'message', None) or e}")
         raise typer.Exit(code=2)
-
-    ok = ytdl.download_video(
-        url=url,
-        quality=quality.value,
-        no_playlist=no_playlist,
-        output_dir=output,
-        write_subs=subs or embed_subs,
-        embed_subs=embed_subs,
-        sub_langs=langs,
-        cookie_file=cfile,
-        cookies_from_browser=cbrowser,
-    )
     if not ok:
         raise typer.Exit(code=1)
 
@@ -312,6 +336,12 @@ def info(
         metavar="BROWSER[:PROFILE][+KEYRING][::CONTAINER]",
         help="Load cookies directly from an installed browser.",
     ),
+    js_runtime: Optional[str] = typer.Option(
+        None,
+        "--js-runtime",
+        metavar="RUNTIME[,RUNTIME...]",
+        help="JS runtimes for YouTube signature solving. Auto-detected by default.",
+    ),
 ):
     """
     Show metadata without downloading anything.
@@ -328,10 +358,13 @@ def info(
     """
     try:
         cfile, cbrowser = resolve_cookies(cookie_file, cookies_from_browser)
-    except typer.BadParameter as e:
-        console.print(f"[bold red]Error:[/bold red] {e.message}")
+        runtimes = resolve_js_runtime(js_runtime)
+        ok = ytdl.show_info(
+            url, playlist=playlist, cookie_file=cfile,
+            cookies_from_browser=cbrowser, js_runtimes=runtimes,
+        )
+    except (typer.BadParameter, ValueError) as e:
+        console.print(f"[bold red]Error:[/bold red] {getattr(e, 'message', None) or e}")
         raise typer.Exit(code=2)
-
-    ok = ytdl.show_info(url, playlist=playlist, cookie_file=cfile, cookies_from_browser=cbrowser)
     if not ok:
         raise typer.Exit(code=1)

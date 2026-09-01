@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Optional
@@ -25,6 +26,44 @@ console = Console()
 # Prefixes playlist downloads with "01 - ", "02 - ", ...
 # Standalone downloads (no playlist_index) get no prefix at all.
 PLAYLIST_PREFIX = "%(playlist_index&{} - |)s"
+
+# JavaScript runtimes yt-dlp can use to solve YouTube's signature
+# challenges, in order of priority. Without one of these on PATH,
+# YouTube serves HTTP 403 for media data.
+# See: https://github.com/yt-dlp/yt-dlp/wiki/EJS
+JS_RUNTIMES = ("deno", "node", "bun", "quickjs")
+
+
+def detect_js_runtimes(preferred: Optional[list[str]] = None) -> dict[str, Any]:
+    """
+    Find installed JS runtimes on PATH and return the yt-dlp
+    `js_runtimes` param ({runtime_name: {config}}).
+
+    Args:
+        preferred: explicit runtime name(s) requested by the user
+                   (e.g. ["node"]). If given, ONLY those are enabled.
+    """
+    from yt_dlp.globals import supported_js_runtimes
+
+    supported = supported_js_runtimes.value.keys()
+
+    if preferred:
+        invalid = [name for name in preferred if name not in supported]
+        if invalid:
+            raise ValueError(
+                f"Unsupported JavaScript runtime(s): {', '.join(invalid)}. "
+                f"Supported: {', '.join(supported)}"
+            )
+        return {name: {} for name in preferred}
+
+    # Auto-detect: enable every runtime available on PATH so yt-dlp can
+    # pick its highest-priority one. Works cross-platform: deno on desktop,
+    # node (pkg install nodejs) on Termux/Android, etc.
+    return {
+        name: {}
+        for name in JS_RUNTIMES
+        if name in supported and shutil.which(name)
+    }
 
 
 def _fmt_duration(seconds: Any) -> Optional[str]:
@@ -162,6 +201,7 @@ class YTDL:
         no_playlist: bool = False,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         opts = {
             "outtmpl": outtmpl,
@@ -185,6 +225,24 @@ class YTDL:
         if cookies_from_browser:
             opts["cookiesfrombrowser"] = tuple(cookies_from_browser)
 
+        # JS runtime for YouTube signature solving. yt-dlp only enables
+        # deno by default, so on systems without deno (e.g. Termux) we
+        # explicitly enable whatever IS available (node, bun, quickjs).
+        try:
+            runtimes = detect_js_runtimes(js_runtimes)
+            if runtimes:
+                opts["js_runtimes"] = runtimes
+            else:
+                console.print(
+                    "[bold yellow]Warning:[/bold yellow] no JavaScript runtime "
+                    f"({', '.join(JS_RUNTIMES)}) found on PATH. YouTube downloads "
+                    "will likely fail with HTTP 403. Install deno, or on Termux: "
+                    "pkg install nodejs",
+                )
+        except ValueError as e:
+            # Let the CLI layer turn this into a clean error message.
+            raise
+
         return opts
 
     def _audio_opts(
@@ -197,6 +255,7 @@ class YTDL:
         output_dir: Optional[Path] = None,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         out_dir = output_dir or AUDIO_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -230,6 +289,7 @@ class YTDL:
             no_playlist=no_playlist,
             cookie_file=cookie_file,
             cookies_from_browser=cookies_from_browser,
+            js_runtimes=js_runtimes,
         )
 
         opts.update(
@@ -266,6 +326,7 @@ class YTDL:
         sub_langs: Optional[list[str]] = None,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         out_dir = output_dir or VIDEO_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -284,6 +345,7 @@ class YTDL:
             no_playlist=no_playlist,
             cookie_file=cookie_file,
             cookies_from_browser=cookies_from_browser,
+            js_runtimes=js_runtimes,
         )
         opts.update(
             {
@@ -356,6 +418,7 @@ class YTDL:
         output_dir: Optional[str] = None,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> bool:
         """Download audio and (by default) embed thumbnail + metadata."""
         out = Path(output_dir).expanduser() if output_dir else None
@@ -368,6 +431,7 @@ class YTDL:
             output_dir=out,
             cookie_file=cookie_file,
             cookies_from_browser=cookies_from_browser,
+            js_runtimes=js_runtimes,
         )
         ok = self._run(url, opts, "Downloading audio")
         if ok:
@@ -385,6 +449,7 @@ class YTDL:
         sub_langs: Optional[list[str]] = None,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> bool:
         """Download video (mp4)."""
         out = Path(output_dir).expanduser() if output_dir else None
@@ -397,6 +462,7 @@ class YTDL:
             sub_langs=sub_langs,
             cookie_file=cookie_file,
             cookies_from_browser=cookies_from_browser,
+            js_runtimes=js_runtimes,
         )
         ok = self._run(url, opts, "Downloading video")
         if ok:
@@ -409,6 +475,7 @@ class YTDL:
         playlist: bool = False,
         cookie_file: Optional[str] = None,
         cookies_from_browser: Optional[tuple] = None,
+        js_runtimes: Optional[list[str]] = None,
     ) -> bool:
         """Print useful metadata without downloading."""
         opts = {
@@ -422,6 +489,9 @@ class YTDL:
             opts["cookiefile"] = str(Path(cookie_file).expanduser())
         if cookies_from_browser:
             opts["cookiesfrombrowser"] = tuple(cookies_from_browser)
+        runtimes = detect_js_runtimes(js_runtimes)
+        if runtimes:
+            opts["js_runtimes"] = runtimes
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=False)
