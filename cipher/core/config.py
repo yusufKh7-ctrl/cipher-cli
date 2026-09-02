@@ -14,7 +14,7 @@ DOWNLOADS_DIR = get_base_dir()
 IS_ANDROID = os.path.exists("/data/data/com.termux/files/usr")
 
 AUDIO_DIR = DOWNLOADS_DIR / "Music" / "Cipher"
-VIDEO_DIR = (DOWNLOADS_DIR / "DCIM" if IS_ANDROID else DOWNLOADS_DIR / "Videos") / "Cipher"
+VIDEO_DIR = DOWNLOADS_DIR / ("DCIM" if IS_ANDROID else DOWNLOADS_DIR / "Videos") / "Cipher"
 THUMBNAIL_DIR = DOWNLOADS_DIR / "Thumbnails"
 
 
