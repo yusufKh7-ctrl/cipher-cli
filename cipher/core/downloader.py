@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,7 +20,7 @@ from rich.progress import (
 from rich.table import Table
 from rich.panel import Panel
 
-from cipher.core.config import AUDIO_DIR, VIDEO_DIR, THUMBNAIL_DIR, ensure_dirs
+from cipher.core.config import AUDIO_DIR, VIDEO_DIR, THUMBNAIL_DIR, ensure_dirs, IS_ANDROID
 
 console = Console()
 
@@ -32,6 +33,33 @@ PLAYLIST_PREFIX = "%(playlist_index&{} - |)s"
 # YouTube serves HTTP 403 for media data.
 # See: https://github.com/yt-dlp/yt-dlp/wiki/EJS
 JS_RUNTIMES = ("deno", "node", "bun", "quickjs")
+
+
+def notify_media_scanner(path: Path) -> None:
+    """Force Android MediaStore to index the given path (file or directory).
+
+    Called after successful downloads on Termux/Android so files appear
+    immediately in the system music/video players without a full rescan.
+    Silently ignored on non-Android platforms or if the broadcast fails.
+    """
+    if not IS_ANDROID:
+        return
+    try:
+        subprocess.run(
+            [
+                "am",
+                "broadcast",
+                "-a",
+                "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+                "-d",
+                f"file://{path.resolve()}",
+            ],
+            check=False,
+            capture_output=True,
+            timeout=10,
+        )
+    except Exception:
+        pass  # non-fatal
 
 
 def detect_js_runtimes(preferred: Optional[list[str]] = None) -> dict[str, Any]:
@@ -435,7 +463,9 @@ class YTDL:
         )
         ok = self._run(url, opts, "Downloading audio")
         if ok:
-            console.print(f"[dim]Saved to:[/dim] [bold]{out or AUDIO_DIR}[/bold]")
+            dest = out or AUDIO_DIR
+            console.print(f"[dim]Saved to:[/dim] [bold]{dest}[/bold]")
+            notify_media_scanner(dest)
         return ok
 
     def download_video(
@@ -466,7 +496,9 @@ class YTDL:
         )
         ok = self._run(url, opts, "Downloading video")
         if ok:
-            console.print(f"[dim]Saved to:[/dim] [bold]{out or VIDEO_DIR}[/bold]")
+            dest = out or VIDEO_DIR
+            console.print(f"[dim]Saved to:[/dim] [bold]{dest}[/bold]")
+            notify_media_scanner(dest)
         return ok
 
     def show_info(
